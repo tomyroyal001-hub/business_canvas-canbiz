@@ -7,6 +7,7 @@ import { SectionEditor } from './SectionEditor';
 import { CanvasTitleEditor } from './CanvasTitleEditor';
 import { generatePDF } from '../utils/pdfGenerator';
 import { createCanvasFromJSON } from '../data/templates';
+import { calculateOptimalSize, calculateScalingFactor } from '../utils/contentSizing';
 
 interface CanvasEditorProps {
   template: CanvasTemplate;
@@ -57,13 +58,39 @@ export const CanvasEditor: React.FC<CanvasEditorProps> = ({ template, onBack }) 
     const cellWidth = Math.floor(EFFECTIVE_CANVAS_WIDTH / 6); // 6 columns within effective area
     const cellHeight = Math.floor(EFFECTIVE_CANVAS_HEIGHT / 6); // 6 rows within effective area
 
-    return templateSections.map(section => ({
+    // Calculate scaling factor based on content
+    const scalingFactor = calculateScalingFactor(
+      templateSections,
+      CANVAS_WIDTH,
+      CANVAS_HEIGHT,
+      CANVAS_MARGIN
+    );
+
+    return templateSections.map(section => {
+      // Calculate optimal size based on content
+      const optimalSize = calculateOptimalSize(
+        section.title,
+        section.content,
+        section.contentType
+      );
+
+      // Apply scaling factor if needed
+      const scaledWidth = Math.round(optimalSize.width * scalingFactor);
+      const scaledHeight = Math.round(optimalSize.height * scalingFactor);
+
+      // Ensure minimum size and grid alignment
+      const finalWidth = Math.max(MIN_SECTION_SIZE, snapToGrid(scaledWidth));
+      const finalHeight = Math.max(MIN_SECTION_SIZE, snapToGrid(scaledHeight));
+
+      // Use original grid position but with content-based sizing
+      return {
       ...section,
       x: CANVAS_MARGIN + (section.x * cellWidth),
       y: CANVAS_MARGIN + (section.y * cellHeight),
-      width: section.width * cellWidth - SECTION_MARGIN,
-      height: section.height * cellHeight - SECTION_MARGIN
-    }));
+      width: finalWidth,
+      height: finalHeight
+    };
+    });
   };
 
   const [sections, setSections] = useState<CanvasSection[]>(() => convertToFixedLayout(template.sections));
@@ -570,11 +597,12 @@ export const CanvasEditor: React.FC<CanvasEditorProps> = ({ template, onBack }) 
     // Hide any existing warning
     setShowSpaceWarning(false);
 
-    const defaultWidth = 200;
-    const defaultHeight = 150;
+    // Calculate optimal size for new section with default content
+    const defaultContent = ['Add your content here...'];
+    const optimalSize = calculateOptimalSize('New Section', defaultContent, 'bullets');
 
     // Find the best empty space
-    const bestSpace = findBestEmptySpace(defaultWidth, defaultHeight);
+    const bestSpace = findBestEmptySpace(optimalSize.width, optimalSize.height);
 
     if (!bestSpace) {
       // No empty space available
@@ -584,11 +612,11 @@ export const CanvasEditor: React.FC<CanvasEditorProps> = ({ template, onBack }) 
     }
 
     // Use the best available space, but ensure consistent sizing with original sections
-    const newX = Math.max(CANVAS_MARGIN, Math.min(bestSpace.x, CANVAS_WIDTH - CANVAS_MARGIN - defaultWidth));
-    const newY = Math.max(CANVAS_MARGIN, Math.min(bestSpace.y, CANVAS_HEIGHT - CANVAS_MARGIN - defaultHeight));
+    const newX = Math.max(CANVAS_MARGIN, Math.min(bestSpace.x, CANVAS_WIDTH - CANVAS_MARGIN - optimalSize.width));
+    const newY = Math.max(CANVAS_MARGIN, Math.min(bestSpace.y, CANVAS_HEIGHT - CANVAS_MARGIN - optimalSize.height));
     // Make new sections fit the available space but maintain consistent margins
-    const newWidth = Math.min(defaultWidth, bestSpace.width, CANVAS_WIDTH - CANVAS_MARGIN - newX);
-    const newHeight = Math.min(defaultHeight, bestSpace.height, CANVAS_HEIGHT - CANVAS_MARGIN - newY);
+    const newWidth = Math.min(optimalSize.width, bestSpace.width, CANVAS_WIDTH - CANVAS_MARGIN - newX);
+    const newHeight = Math.min(optimalSize.height, bestSpace.height, CANVAS_HEIGHT - CANVAS_MARGIN - newY);
 
     const theme = currentTemplate.theme;
     const sectionIndex = sections.length;
@@ -597,7 +625,7 @@ export const CanvasEditor: React.FC<CanvasEditorProps> = ({ template, onBack }) 
     const newSection: CanvasSection = {
       id: `section-${Date.now()}`,
       title: 'New Section',
-      content: ['Add your content here...'],
+      content: defaultContent,
       contentType: 'bullets',
       x: newX,
       y: newY,
@@ -607,7 +635,7 @@ export const CanvasEditor: React.FC<CanvasEditorProps> = ({ template, onBack }) 
     };
 
     setSections(prevSections => [...prevSections, newSection]);
-  }, [sections, currentTemplate.theme]);
+  }, [sections, currentTemplate.theme, CANVAS_MARGIN, CANVAS_WIDTH, CANVAS_HEIGHT]);
 
   const handleJsonImport = useCallback(() => {
     try {

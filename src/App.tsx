@@ -5,6 +5,7 @@ import { CanvasEditor } from './components/CanvasEditor';
 import { canvasTemplates } from './data/templates';
 import { CanvasTemplate, UploadData } from './types/canvas';
 import { createCanvasFromJSON } from './data/templates';
+import { calculateOptimalSize, calculateScalingFactor } from './utils/contentSizing';
 import { CanvasSection, TemplateTheme } from './types/canvas';
 
 
@@ -39,13 +40,43 @@ function App() {
     const cellWidth = Math.floor(EFFECTIVE_CANVAS_WIDTH / 6); // 6 columns within effective area
     const cellHeight = Math.floor(EFFECTIVE_CANVAS_HEIGHT / 6); // 6 rows within effective area
 
-    return templateSections.map(section => ({
+    // Calculate scaling factor based on content
+    const scalingFactor = calculateScalingFactor(
+      templateSections,
+      CANVAS_WIDTH,
+      CANVAS_HEIGHT,
+      CANVAS_MARGIN
+    );
+
+    return templateSections.map(section => {
+      // Calculate optimal size based on content
+      const optimalSize = calculateOptimalSize(
+        section.title,
+        section.content,
+        section.contentType
+      );
+
+      // Apply scaling factor if needed
+      const scaledWidth = Math.round(optimalSize.width * scalingFactor);
+      const scaledHeight = Math.round(optimalSize.height * scalingFactor);
+
+      // Ensure minimum size and grid alignment
+      const snapToGrid = (value: number): number => {
+        return Math.round(value / GRID_SIZE) * GRID_SIZE;
+      };
+      
+      const finalWidth = Math.max(MIN_SECTION_SIZE, snapToGrid(scaledWidth));
+      const finalHeight = Math.max(MIN_SECTION_SIZE, snapToGrid(scaledHeight));
+
+      // Use original grid position but with content-based sizing
+      return {
       ...section,
       x: CANVAS_MARGIN + (section.x * cellWidth),
       y: CANVAS_MARGIN + (section.y * cellHeight),
-      width: section.width * cellWidth - SECTION_MARGIN,
-      height: section.height * cellHeight - SECTION_MARGIN
-    }));
+      width: finalWidth,
+      height: finalHeight
+    };
+    });
   };
 
   const [sections, setSections] = useState<CanvasSection[]>(() =>

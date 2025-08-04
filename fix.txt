@@ -1,0 +1,59 @@
+export const generatePDF = async (element: HTMLElement, filename: string) => {
+  try {
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      logging: false,
+      allowTaint: true,
+      useCORS: true,
+      backgroundColor: '#ffffff'
+    });
+
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF({
+      orientation: 'landscape',
+      unit: 'mm',
+      format: 'a4'
+    });
+
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+    const canvasAspectRatio = canvas.height / canvas.width;
+    const pdfAspectRatio = pdfHeight / pdfWidth;
+
+    let renderWidth, renderHeight;
+
+    if (canvasAspectRatio > pdfAspectRatio) {
+      renderHeight = pdfHeight;
+      renderWidth = renderHeight / canvasAspectRatio;
+    } else {
+      renderWidth = pdfWidth;
+      renderHeight = renderWidth * canvasAspectRatio;
+    }
+
+    const xOffset = (pdfWidth - renderWidth) / 2;
+    const yOffset = (pdfHeight - renderHeight) / 2;
+
+    pdf.addImage(imgData, 'PNG', xOffset, yOffset, renderWidth, renderHeight);
+    pdf.save(filename);
+  } catch (error) {
+    console.error('Error generating PDF:', error);
+    alert('Error generating PDF. Please try again.');
+  }
+};
+
+
+  const downloadPDF = async () => {
+    const canvasElement = document.getElementById('canvas-preview');
+    if (canvasElement) {
+      await generatePDF(canvasElement, `${canvasTitle.replace(/\s+/g, '-').toLowerCase()}-canvas.pdf`);
+    }
+  };
+
+
+    <button
+              onClick={downloadPDF}
+              className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:shadow-lg transition-all font-medium shadow-lg"
+            >
+              <Download size={16} className="inline mr-2" />
+              Download PDF
+            </button>

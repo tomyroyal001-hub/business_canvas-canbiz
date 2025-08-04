@@ -53,6 +53,10 @@ export const CanvasEditor: React.FC<CanvasEditorProps> = ({ template, onBack }) 
   const EFFECTIVE_CANVAS_WIDTH = CANVAS_WIDTH - (CANVAS_MARGIN * 2);
   const EFFECTIVE_CANVAS_HEIGHT = CANVAS_HEIGHT - (CANVAS_MARGIN * 2);
 
+  const snapToGrid = (value: number): number => {
+    return Math.round(value / GRID_SIZE) * GRID_SIZE;
+  };
+
   // Convert template sections to fixed pixel positions and sizes
   const convertToFixedLayout = (templateSections: CanvasSection[]): CanvasSection[] => {
     const cellWidth = Math.floor(EFFECTIVE_CANVAS_WIDTH / 6); // 6 columns within effective area
@@ -75,10 +79,6 @@ export const CanvasEditor: React.FC<CanvasEditorProps> = ({ template, onBack }) 
       );
 
       // Apply scaling factor if needed
-      const scaledWidth = Math.round(optimalSize.width * scalingFactor);
-      const scaledHeight = Math.round(optimalSize.height * scalingFactor);
-
-      // Ensure minimum size and grid alignment
       const finalWidth = Math.max(MIN_SECTION_SIZE, snapToGrid(scaledWidth));
       const finalHeight = Math.max(MIN_SECTION_SIZE, snapToGrid(scaledHeight));
 

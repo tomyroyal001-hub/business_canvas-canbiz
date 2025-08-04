@@ -35,6 +35,11 @@ function App() {
   const EFFECTIVE_CANVAS_WIDTH = CANVAS_WIDTH - (CANVAS_MARGIN * 2);
   const EFFECTIVE_CANVAS_HEIGHT = CANVAS_HEIGHT - (CANVAS_MARGIN * 2);
 
+  // Snap to grid function
+  const snapToGrid = (value: number): number => {
+    return Math.round(value / GRID_SIZE) * GRID_SIZE;
+  };
+
   // Convert template sections to fixed pixel positions and sizes
   const convertToFixedLayout = (templateSections: CanvasSection[]): CanvasSection[] => {
     const cellWidth = Math.floor(EFFECTIVE_CANVAS_WIDTH / 6); // 6 columns within effective area
@@ -61,10 +66,6 @@ function App() {
       const scaledHeight = Math.round(optimalSize.height * scalingFactor);
 
       // Ensure minimum size and grid alignment
-      const snapToGrid = (value: number): number => {
-        return Math.round(value / GRID_SIZE) * GRID_SIZE;
-      };
-      
       const finalWidth = Math.max(MIN_SECTION_SIZE, snapToGrid(scaledWidth));
       const finalHeight = Math.max(MIN_SECTION_SIZE, snapToGrid(scaledHeight));
 
